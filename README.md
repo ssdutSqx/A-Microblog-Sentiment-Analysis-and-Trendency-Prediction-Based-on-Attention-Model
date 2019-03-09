@@ -8,3 +8,7 @@
 我是一个测试
 ## Test1
 sqx test
+
+## Test 2
+
+sqx table test
