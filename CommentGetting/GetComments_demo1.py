@@ -38,9 +38,9 @@ def parse_one_page(html_return):
     return comment_list
 
 
-def write_to_file(data):
-    data_to_write = pd.DataFrame(data)
-    data_to_write.to_csv('test.csv', header=False, index=False, mode='a+')  # 去掉表头行和索引列
+# def write_to_file(data):
+#     data_to_write = pd.DataFrame(data)
+#     data_to_write.to_csv('test.csv', header=False, index=False, mode='a+')  # 去掉表头行和索引列
 
 
 def main(i):
