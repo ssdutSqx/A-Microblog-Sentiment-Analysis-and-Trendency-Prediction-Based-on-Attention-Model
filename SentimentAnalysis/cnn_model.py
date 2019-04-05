@@ -45,7 +45,7 @@ class TextcnnConfig(object):
     dropout_keep_prob = 0.5
     class_num = 2
     learning_rate = 1e-3
-    mini_patch = 20
+    mini_batch = 20
 
 class TextCNN(object):
     def __init__(self,config):
@@ -110,22 +110,23 @@ with tf.Session() as sess:
     sess.run(init)
 
     for i in range(500):
-        train_index = np.random.randint(len(train_x),size=config.mini_patch)
+        train_index = np.random.randint(len(train_x),size=config.mini_batch)
         sess.run(cnn.optimize, feed_dict={"input_x:0": train_x[train_index], "input_y:0": train_y[train_index]})
+
+        train_accuracy = sess.run(cnn.accuracy, feed_dict={"input_x:0": train_x, "input_y:0": train_y})
+        train_accuracy_list.append(train_accuracy)
+        test_accuracy = sess.run(cnn.accuracy, feed_dict={"input_x:0": test_x, "input_y:0": test_y})
+        test_accuracy_list.append(test_accuracy)
+
         if i % 10 == 0:
             #loss = sess.run(cnn.loss,feed_dict = {"input_x:0": vec_array, "input_y:0": label_array})
             #print('After %d rounds,loss is %s' % (i,loss))
-            train_accuracy = sess.run(cnn.accuracy, feed_dict={"input_x:0": train_x, "input_y:0": train_y})
             print('After %d rounds,accuracy on training set is %s' % (i, train_accuracy))
-            train_accuracy_list.append(train_accuracy)
-
-            test_accuracy = sess.run(cnn.accuracy, feed_dict={"input_x:0": test_x, "input_y:0": test_y})
             print('After %d rounds,accuracy on testing set is %s' % (i, test_accuracy))
-            test_accuracy_list.append(test_accuracy)
 
-plt.plot(range(0,500,10),train_accuracy_list)
-plt.plot(range(0,500,10),test_accuracy_list)
+plt.plot(range(0,500),train_accuracy_list)
+plt.plot(range(0,500),test_accuracy_list)
 plt.xlabel("round")
 plt.ylabel('accuracy')
-plt.title('CNN mini-patch=%s' % config.mini_patch)
+plt.title('CNN mini-patch=%s' % config.mini_batch)
 plt.show()
