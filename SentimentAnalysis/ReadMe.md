@@ -14,7 +14,7 @@ https://pan.baidu.com/s/1FHl_bQkYucvVk-j2KG4dxA
 
   mini_batch=20
 
-  vocabulary_size=1800
+  vocabulary_size=100
 
   dropout_keep_pro=0.5
 

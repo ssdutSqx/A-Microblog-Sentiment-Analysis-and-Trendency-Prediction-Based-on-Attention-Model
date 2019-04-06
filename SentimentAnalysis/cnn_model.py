@@ -5,24 +5,37 @@ import matplotlib.pyplot as plt
 
 time_start = time.time()
 
+class TextcnnConfig(object):
+    # 参数配置
+    vector_dim = 300
+    vocabulary_size = 100
+    filter_num = 32
+    window_size = [3,4,5]
+    dropout_keep_prob = 0.5
+    class_num = 2
+    learning_rate = 1e-3
+    mini_batch = 20
+
+config = TextcnnConfig()
+
 cnt = 0
-demo = 200
-vec_array = np.zeros(shape=[2 * demo,1800,300])
+demo = 2000
+vec_array = np.zeros(shape=[2 * demo,config.vocabulary_size,300])
 label_array = np.zeros(shape=[2 * demo,2])
 
-while cnt != demo: # full = 21576
+while cnt != demo: # full = 19226
 
     name_neg = "neg_vec_" + str(cnt) + ".npy"
     neg_seg_vec = np.load(name_neg)
-    if neg_seg_vec.shape[0] < 1800:
-        neg_seg_vec = np.row_stack((neg_seg_vec,np.zeros([1800 - neg_seg_vec.shape[0],300])))
+    if neg_seg_vec.shape[0] < config.vocabulary_size:
+        neg_seg_vec = np.row_stack((neg_seg_vec,np.zeros([config.vocabulary_size - neg_seg_vec.shape[0],300])))
     vec_array[2 * cnt] = neg_seg_vec
     label_array[2 * cnt] = [1,0]
 
     name_pos = "pos_vec_" + str(cnt) + ".npy"
     pos_seg_vec = np.load(name_pos)
-    if pos_seg_vec.shape[0] < 1800:
-        pos_seg_vec = np.row_stack((pos_seg_vec,np.zeros([1800 - pos_seg_vec.shape[0],300])))
+    if pos_seg_vec.shape[0] < config.vocabulary_size:
+        pos_seg_vec = np.row_stack((pos_seg_vec,np.zeros([config.vocabulary_size - pos_seg_vec.shape[0],300])))
     vec_array[2 * cnt + 1] = pos_seg_vec
     label_array[2 * cnt] = [0,1]
     cnt += 1
@@ -36,16 +49,6 @@ test_x , test_y = vec_array[~train_split],label_array[~train_split]
 time_end = time.time()
 print("time_cost:",time_end - time_start)
 
-class TextcnnConfig(object):
-    # 参数配置
-    vector_dim = 300
-    vocabulary_size = 1800
-    filter_num = 32
-    window_size = [3,4,5]
-    dropout_keep_prob = 0.5
-    class_num = 2
-    learning_rate = 1e-3
-    mini_batch = 20
 
 class TextCNN(object):
     def __init__(self,config):
@@ -100,7 +103,6 @@ class TextCNN(object):
             correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
-config = TextcnnConfig()
 cnn = TextCNN(config)
 train_accuracy_list = []
 test_accuracy_list = []
@@ -128,5 +130,5 @@ plt.plot(range(0,500),train_accuracy_list)
 plt.plot(range(0,500),test_accuracy_list)
 plt.xlabel("round")
 plt.ylabel('accuracy')
-plt.title('CNN mini-patch=%s' % config.mini_batch)
+plt.title('CNN mini-batch=%s' % config.mini_batch)
 plt.show()
