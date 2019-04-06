@@ -30,4 +30,4 @@ https://pan.baidu.com/s/1FHl_bQkYucvVk-j2KG4dxA
 
 ### 结果
 
-- ![avatar](/image/cnn_result.png)
+- ![avatar](./image/cnn_result.png)
