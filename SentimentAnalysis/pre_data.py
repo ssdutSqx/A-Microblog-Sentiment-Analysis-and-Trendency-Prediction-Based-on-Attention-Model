@@ -52,7 +52,7 @@ with open("positif.txt", 'rb') as f:
         name = "pos_vec_" + str(pos_cnt)
         np.save(name, seg_vec_array)
         pos_cnt += 1
-print("pos_cnt:", neg_cnt)
+print("pos_cnt:", pos_cnt)
 
 time_end = time.time()
 print("time_cost:",time_end - time_start)
