@@ -1,15 +1,16 @@
 import tensorflow as tf
 
+
 class TextAT_LSTMConfig(object):
     vector_dim = 300
     vocabulary_size = 100
-    dropout_keep_prob = 0.8
+    dropout_keep_prob = 0.9
     class_num = 2
-    learning_rate = 1e-4
+    learning_rate = 5 * 1e-5
     hidden_size = 128
     num_layers = 1
     mini_batch = 40
-    round = 5000
+    epoch = 10
 
 class TextAT_LSTM:
     def __init__(self,config):
@@ -18,41 +19,34 @@ class TextAT_LSTM:
         self.input_x = tf.placeholder(tf.float32, [None,
                                                    self.config.vocabulary_size, self.config.vector_dim], name="input_x")
         self.input_y = tf.placeholder(tf.float32, [None, self.config.class_num], name="input_y")
+        self.text_length = tf.placeholder(tf.int32, shape=(None), name="text_length")
 
-        self.rnn()
+        self.at_lstm()
 
-    def rnn(self):
-        def get_a_cell():
-            return tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
-
-
-        with tf.name_scope("lstm"):
-            cell = tf.nn.rnn_cell.MultiRNNCell([get_a_cell()for _ in range(self.config.num_layers)])
-            outputs, state = tf.nn.dynamic_rnn(cell, self.input_x, dtype=tf.float32)
-
+    def at_lstm(self):
+        with tf.name_scope("bi_lstm"):
+            cell_fw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
+            cell_bw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
+            outputs, _ = tf.nn.bidirectional_dynamic_rnn(
+                cell_fw, cell_bw, self.input_x,
+                sequence_length=self.text_length, dtype=tf.float32
+            )
+            outputs = tf.concat(outputs, 2)
+            self.outputs = tf.layers.dense(outputs, units=self.config.hidden_size)
 
         with tf.name_scope("attention"):
-            '''
-            W1 = tf.Variable(tf.random_normal(shape=[self.config.hidden_size, self.config.hidden_size], stddev=0.1), name="W1")
-            print(W1)
-            M = tf.matmul(tf.reshape(outputs, shape=[-1, self.config.hidden_size]), W1)
-            self.M = tf.nn.tanh(tf.reshape(M, shape=[-1, self.config.vocabulary_size, self.config.hidden_size], name="M"))
-            '''
-            self.M = tf.nn.tanh(tf.layers.batch_normalization(outputs), name="M")
-            print(self.M)
-            self.alpha = tf.nn.softmax(tf.layers.dense(self.M, units=1), name="alpha")
-            print(self.alpha)
-            r = tf.matmul(tf.transpose(outputs, [0, 2, 1]), self.alpha)
+            M = tf.nn.tanh(tf.layers.batch_normalization(self.outputs), name="M")
+            alpha = tf.nn.softmax(tf.layers.dense(M, units=1), name="alpha")
+            r = tf.matmul(tf.transpose(self.outputs, [0, 2, 1]), alpha)
             self.r = tf.layers.batch_normalization(tf.reshape(r, [-1, self.config.hidden_size]), name="r")
-            print(self.r)
 
 
         with tf.name_scope("output"):
-            self.hidden_layer = tf.layers.dense(self.r, activation=tf.nn.relu, units=self.config.hidden_size,
+            hidden_layer = tf.layers.dense(self.r, activation=tf.nn.relu, units=self.config.hidden_size,
                                                 name="hidden_layer")
-            self.h_drop = tf.layers.dropout(self.hidden_layer, self.config.dropout_keep_prob)
+            h_drop = tf.layers.dropout(hidden_layer, self.config.dropout_keep_prob)
 
-            score = tf.layers.dense(self.h_drop, units=self.config.class_num, name="scores")
+            score = tf.layers.dense(h_drop, units=self.config.class_num, name="scores")
             self.scores = tf.nn.softmax(score)
             self.prediction = tf.argmax(self.scores, 1, name="predictions")
 
