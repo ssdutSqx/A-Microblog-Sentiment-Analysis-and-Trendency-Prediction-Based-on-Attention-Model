@@ -8,8 +8,8 @@ class TextAT_LSTMConfig(object):
     class_num = 2
     learning_rate = 5 * 1e-5
     hidden_size = 128
-    num_layers = 1
-    mini_batch = 40
+    num_layers = 2
+    mini_batch = 128
     epoch = 10
 
 class TextAT_LSTM:
@@ -19,20 +19,23 @@ class TextAT_LSTM:
         self.input_x = tf.placeholder(tf.float32, [None,
                                                    self.config.vocabulary_size, self.config.vector_dim], name="input_x")
         self.input_y = tf.placeholder(tf.float32, [None, self.config.class_num], name="input_y")
-        self.text_length = tf.placeholder(tf.int32, shape=(None), name="text_length")
 
+        self.text_length = tf.placeholder(tf.int32, [None], name="text_length")
         self.at_lstm()
 
     def at_lstm(self):
         with tf.name_scope("bi_lstm"):
-            cell_fw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
-            cell_bw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
-            outputs, _ = tf.nn.bidirectional_dynamic_rnn(
-                cell_fw, cell_bw, self.input_x,
-                sequence_length=self.text_length, dtype=tf.float32
-            )
-            outputs = tf.concat(outputs, 2)
-            self.outputs = tf.layers.dense(outputs, units=self.config.hidden_size)
+            self.bi_lstm_input = self.input_x
+            for _ in range(self.config.num_layers):
+                with tf.variable_scope(None, default_name="bi-lstm"):
+                    cell_fw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
+                    cell_bw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
+                    output, _ = tf.nn.bidirectional_dynamic_rnn(
+                        cell_fw, cell_bw, self.bi_lstm_input,
+                        sequence_length=self.text_length, dtype=tf.float32
+                    )
+                    self.bi_lstm_input = tf.concat(output, 2)
+            self.outputs = tf.layers.dense(self.bi_lstm_input, units=self.config.hidden_size)
 
         with tf.name_scope("attention"):
             M = tf.nn.tanh(tf.layers.batch_normalization(self.outputs), name="M")

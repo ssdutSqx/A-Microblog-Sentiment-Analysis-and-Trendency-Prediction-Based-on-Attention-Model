@@ -9,8 +9,8 @@ class TextrnnConfig(object):
     learning_rate = 1e-3
     hidden_size = 128
     num_layers = 2
-    mini_batch = 256
-    epoch = 10
+    mini_batch = 512
+    epoch = 20
 
 class TextRNN:
     def __init__(self,config):
@@ -32,7 +32,8 @@ class TextRNN:
                     cell_bw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
                     (output, self.output_state) = tf.nn.bidirectional_dynamic_rnn(
                         cell_fw, cell_bw, input,
-                        sequence_length=self.text_length, dtype=tf.float32
+                        sequence_length=self.text_length,
+                        dtype=tf.float32
                     )
                     input = tf.concat(output, 2)
             output_state = tf.concat([self.output_state[0].c, self.output_state[1].c], 1)

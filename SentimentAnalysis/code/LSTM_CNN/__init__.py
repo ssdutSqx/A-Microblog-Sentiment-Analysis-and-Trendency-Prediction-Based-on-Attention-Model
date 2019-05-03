@@ -5,10 +5,10 @@ class TextLSTM_CNNConfig(object):
     vector_dim = 300
     vocabulary_size = 100
     class_num = 2
-    learning_rate = 1e-4
+    learning_rate = 1e-3
     # basic settings
 
-    mini_batch = 40
+    mini_batch = 128
     epoch = 10
     # running settings
 
@@ -16,7 +16,7 @@ class TextLSTM_CNNConfig(object):
     num_layers = 2
     # LSTM settings
 
-    filter_num = 80
+    filter_num = 64
     window_size = [3, 4, 5]
     # CNN settings
 
@@ -34,17 +34,17 @@ class TextLSTM_CNN:
 
     def lstm_cnn(self):
         with tf.name_scope("bi_lstm"):
-            input = self.input_x
+            self.bi_lstm_input = self.input_x
             for _ in range(self.config.num_layers):
                 with tf.variable_scope(None, default_name="bi-lstm"):
                     cell_fw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
                     cell_bw = tf.nn.rnn_cell.BasicLSTMCell(num_units=self.config.hidden_size)
                     output, _ = tf.nn.bidirectional_dynamic_rnn(
-                        cell_fw, cell_bw, input,
+                        cell_fw, cell_bw, self.bi_lstm_input,
                         sequence_length=self.text_length, dtype=tf.float32
                     )
-                    input = output
-            self.outputs = tf.expand_dims(tf.concat(input, 2), -1).astype(tf.float32)
+                    self.bi_lstm_input = tf.concat(output, 2)
+            self.outputs = tf.expand_dims(tf.concat(self.bi_lstm_input, 2), -1)
 
         with tf.name_scope("cnn"):
             pooled_outputs = []
@@ -63,7 +63,7 @@ class TextLSTM_CNN:
 
                     pooled = tf.nn.max_pool(
                         h,
-                        ksize=[1, 2*self.config.hidden_size - filter_size + 1, 1, 1],
+                        ksize=[1, self.config.vocabulary_size - filter_size + 1, 1, 1],
                         strides=[1, 1, 1, 1],
                         padding="VALID",
                         name="pool"
@@ -76,8 +76,8 @@ class TextLSTM_CNN:
 
         with tf.name_scope("output"):
             # 全连接层
-            self.hidden_layer = tf.layers.dense(self.h_pool_flat, activation=tf.nn.relu
-                                                , units=self.config.hidden_size, name="hidden_layer")
+            self.hidden_layer = tf.layers.dense(self.h_pool_flat, activation=tf.nn.relu,
+                                                units=self.config.hidden_size, name="hidden_layer")
                     # dense的作用 添加一个隐含层
             self.h_drop = tf.nn.dropout(self.hidden_layer, self.config.dropout_keep_prob)
 

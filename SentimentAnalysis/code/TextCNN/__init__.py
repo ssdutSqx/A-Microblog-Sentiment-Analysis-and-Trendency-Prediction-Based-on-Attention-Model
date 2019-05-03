@@ -4,13 +4,13 @@ class TextcnnConfig(object):
     # 参数配置
     vector_dim = 300
     vocabulary_size = 100
-    filter_num = 80
+    filter_num = 64
     window_size = [3, 4, 5]
     dropout_keep_prob = 0.8
     class_num = 2
     learning_rate = 1e-3
     hidden_size = 128
-    mini_batch = 50
+    mini_batch = 64
     epoch = 10
 
 class TextCNN(object):

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import random
 import LSTM_CNN
 
 time_start = time.time()
@@ -26,7 +27,7 @@ del pos_vec_array
 dataset = pd.DataFrame(data={"vector": vec_list, "label": label_list})
 dataset = dataset.sample(frac=1).reset_index(drop=True)
 
-demo = 400
+demo = 5000
 dataset = dataset.iloc[:demo]
 print(dataset.head())
 vec_array = np.zeros(shape=[demo, 100, 300])
@@ -47,9 +48,11 @@ print("time_cost:", time_end - time_start)
 
 def batch_index_creator(size, batch_size):
     cnt = 0
+    my_list = list(range(0, size))
+    random.shuffle(my_list)
     batch_index_list = []
     while cnt < size:
-        batch_index_list.append(range(cnt, min(cnt+batch_size, size)))
+        batch_index_list.append(my_list[cnt: min(cnt+batch_size, size)])
         cnt += batch_size
     return batch_index_list
 
@@ -65,19 +68,19 @@ with tf.Session() as sess:
     sess.run(init)
 
     i = 0
+    feed_train = {
+        "input_x:0": train_x, "input_y:0": train_y,
+        "text_length:0": np.array([config.vocabulary_size] * train_x.shape[0], dtype='int32')
+    }
+    feed_test = {
+        "input_x:0": test_x, "input_y:0": test_y,
+        "text_length:0": np.array([config.vocabulary_size] * test_x.shape[0], dtype='int32')
+    }
     for n in range(config.epoch):
         for train_index in batch_index_list:
             feed_batch = {
                 "input_x:0": train_x[train_index], "input_y:0": train_y[train_index],
-                "text_length:0": np.array([config.vocabulary_size] * train_x[train_index].shape[0], dtype='int32')
-            }
-            feed_train = {
-                "input_x:0": train_x[train_index], "input_y:0": train_y[train_index],
-                "text_length:0": np.array([config.vocabulary_size] * train_x[train_index].shape[0], dtype='int32')
-            }
-            feed_test = {
-                "input_x:0": train_x[train_index], "input_y:0": train_y[train_index],
-                "text_length:0": np.array([config.vocabulary_size] * train_x[train_index].shape[0], dtype='int32')
+                "text_length:0": np.array([config.vocabulary_size] * len(train_index), dtype='int32')
             }
 
             batch_loss_before = sess.run(lstm_cnn.loss, feed_dict=feed_batch)
@@ -94,13 +97,14 @@ with tf.Session() as sess:
             test_accuracy = sess.run(lstm_cnn.accuracy, feed_dict=feed_test)
             test_accuracy_list.append(test_accuracy)
 
+
             print(i, batch_loss_before, batch_loss_after, train_loss, test_loss, train_accuracy, test_accuracy)
             i += 1
 
 accuracy = pd.DataFrame(data={"train_accuracy": train_accuracy_list, "test_accuracy": test_accuracy_list,
                               "train_loss": train_loss_list, "test_loss": test_loss_list})
-accuracy.to_csv("LSTM_CNNModel_AdamOnly_mini-batch=%s_hidden-size=%s_num-layers=%s_dropout-keep=%s.csv"
-                % (config.mini_batch, config.hidden_size, config.num_layers, config.dropout_keep_prob),
+accuracy.to_csv("LSTM_CNNModel_AdamOnly_mini-batch=%s_hidden-size=%s_num-layers=%s_filter_num=%s.csv"
+                % (config.mini_batch, config.hidden_size, config.num_layers, config.filter_num),
                 encoding="utf-8")
 
 plt.plot(range(0, i), train_loss_list)

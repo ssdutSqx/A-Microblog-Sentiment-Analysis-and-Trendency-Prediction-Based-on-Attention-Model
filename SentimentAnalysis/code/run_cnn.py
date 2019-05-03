@@ -3,6 +3,7 @@ import tensorflow as tf
 import time
 import matplotlib.pyplot as plt
 import pandas as pd
+import random
 import TextCNN
 
 time_start = time.time()
@@ -48,9 +49,11 @@ print("time_cost:", time_end - time_start)
 
 def batch_index_creator(size, batch_size):
     cnt = 0
+    my_list = list(range(0, size))
+    random.shuffle(my_list)
     batch_index_list = []
     while cnt < size:
-        batch_index_list.append(range(cnt, min(cnt+batch_size, size)))
+        batch_index_list.append(my_list[cnt: min(cnt+batch_size, size)])
         cnt += batch_size
     return batch_index_list
 
@@ -61,7 +64,6 @@ train_accuracy_list = []
 test_accuracy_list = []
 train_loss_list = []
 test_loss_list = []
-batch_index_list = batch_index_creator(int(demo * 0.8), config.mini_batch)
 
 with tf.Session() as sess:
     init = tf.global_variables_initializer()
@@ -69,8 +71,16 @@ with tf.Session() as sess:
 
     i = 0
     for n in range(config.epoch):
+        batch_index_list = batch_index_creator(int(demo * 0.8), config.mini_batch)
         for train_index in batch_index_list:
-            sess.run(cnn.AdamOptimize, feed_dict={"input_x:0": train_x[train_index], "input_y:0": train_y[train_index]})
+            feed_batch = {
+                "input_x:0": train_x[train_index], "input_y:0": train_y[train_index],
+                "text_length:0": np.array([config.vocabulary_size] * len(train_index), dtype='int32')
+            }
+            batch_loss_before = sess.run(cnn.loss, feed_dict=feed_batch)
+            sess.run(cnn.AdamOptimize, feed_dict=feed_batch)
+            batch_loss_after = sess.run(cnn.loss, feed_dict=feed_batch)
+            del feed_batch
 
             train_loss = sess.run(cnn.loss, feed_dict={"input_x:0": train_x, "input_y:0": train_y})
             train_loss_list.append(train_loss)
@@ -82,7 +92,11 @@ with tf.Session() as sess:
             test_accuracy = sess.run(cnn.accuracy, feed_dict={"input_x:0": test_x, "input_y:0": test_y})
             test_accuracy_list.append(test_accuracy)
 
-            print(i, train_loss, test_loss, train_accuracy, test_accuracy)
+            if batch_loss_after > batch_loss_before:
+                cnn.config.learning_rate *= 0.95
+                print(cnn.config.learning_rate)
+
+            print(i, batch_loss_before, batch_loss_after, train_loss, test_loss, train_accuracy, test_accuracy)
             i += 1
 
 

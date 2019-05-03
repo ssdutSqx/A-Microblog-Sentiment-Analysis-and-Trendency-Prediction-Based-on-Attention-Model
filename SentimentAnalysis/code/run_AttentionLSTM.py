@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import random
 import Attention_LSTM
 
 time_start = time.time()
@@ -47,9 +48,11 @@ print("time_cost:", time_end - time_start)
 
 def batch_index_creator(size, batch_size):
     cnt = 0
+    my_list = list(range(0, size))
+    random.shuffle(my_list)
     batch_index_list = []
     while cnt < size:
-        batch_index_list.append(range(cnt, min(cnt+batch_size, size)))
+        batch_index_list.append(my_list[cnt: min(cnt+batch_size, size)])
         cnt += batch_size
     return batch_index_list
 
@@ -59,7 +62,6 @@ train_accuracy_list = []
 test_accuracy_list = []
 train_loss_list = []
 test_loss_list = []
-batch_index_list = batch_index_creator(int(demo*0.8), config.mini_batch)
 
 
 with tf.Session() as sess:
@@ -68,19 +70,20 @@ with tf.Session() as sess:
     sess.run(init)
 
     i = 0
+    feed_train = {
+        "input_x:0": train_x, "input_y:0": train_y,
+        "text_length:0": np.array([config.vocabulary_size] * train_x.shape[0], dtype='int32')
+    }
+    feed_test = {
+        "input_x:0": test_x, "input_y:0": test_y,
+        "text_length:0": np.array([config.vocabulary_size] * test_x.shape[0], dtype='int32')
+    }
     for n in range(config.epoch):
+        batch_index_list = batch_index_creator(int(demo * 0.8), config.mini_batch)
         for train_index in batch_index_list:
             feed_batch = {
                 "input_x:0": train_x[train_index], "input_y:0": train_y[train_index],
-                "text_length:0": np.array([config.vocabulary_size] * train_x[train_index].shape[0], dtype='int32')
-            }
-            feed_train = {
-                "input_x:0": train_x[train_index], "input_y:0": train_y[train_index],
-                "text_length:0": np.array([config.vocabulary_size] * train_x[train_index].shape[0], dtype='int32')
-            }
-            feed_test = {
-                "input_x:0": train_x[train_index], "input_y:0": train_y[train_index],
-                "text_length:0": np.array([config.vocabulary_size] * train_x[train_index].shape[0], dtype='int32')
+                "text_length:0": np.array([config.vocabulary_size] * len(train_index), dtype='int32')
             }
 
             batch_loss_before = sess.run(at_lstm.loss, feed_dict=feed_batch)
