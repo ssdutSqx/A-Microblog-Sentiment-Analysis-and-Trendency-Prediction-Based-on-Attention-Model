@@ -100,12 +100,12 @@ class Attention(nn.Module):
 
         return output, attention_weights
 
-attention = Attention(vecDim)
-query = train['text']
-context = train['text']
-temp, weights = attention(query, context)
+#attention = Attention(vecDim)
+#query = train['text']
+#context = train['text']
+#temp, weights = attention(query, context)
 
-train['text'] = temp
+#train['text'] = temp
 
 
 #批处理
